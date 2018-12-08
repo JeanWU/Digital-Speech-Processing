@@ -11,11 +11,12 @@
 
 #define FILE_LENGTH 20
 using namespace std;
+Vocab ZhuYin, Big5, voc;
 
-int find_index(int idx, Vocab voc, Vocab Big5);
+int find_index(int idx);
 LogP check_backoff(LogP logp, LogP backoff);
 void Viterbi(char *input_text, char *input_map, char *input_lm, int order);
-void find_max_path(int count, int bound, LogP prob[][1000], Vocab Big5, VocabIndex vidxpath[][1000], int backtrack[][1000], VocabString *finalpath);
+void find_max_path(int count, int bound, LogP prob[][1000], VocabIndex vidxpath[][1000], int backtrack[][1000], VocabString *finalpath);
 void print_path(VocabString path[], int count);
 
 
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]){
 
 
 void Viterbi(char *input_text, char *input_map, char *input_lm, int order){
-  Vocab voc, ZhuYin, Big5;
+  //Vocab voc, ZhuYin, Big5;
 
   //read input map and language model
   VocabMap map(ZhuYin, Big5);
@@ -78,7 +79,7 @@ void Viterbi(char *input_text, char *input_map, char *input_lm, int order){
     iter.init();
     int size=0;
     while (iter.next(vidx,p)){
-      VocabIndex candidate_idx=find_index(vidx, voc, Big5);
+      VocabIndex candidate_idx=find_index(vidx);
       LogP logp=lm.wordProb(candidate_idx, empty_context);
       prob[0][size]=(logp == LogP_Zero)? -66: logp;
       vidxpath[0][size]=vidx;
@@ -93,16 +94,16 @@ void Viterbi(char *input_text, char *input_map, char *input_lm, int order){
       iter.init();
       size=0;
       while (iter.next(vidx,p)){
-        VocabIndex candidate_idx=find_index(vidx, voc, Big5);
+        VocabIndex candidate_idx=find_index(vidx);
 
         LogP maxp=LogP_Zero;
         for (int j=0; j<candidate_cnt[i-1]; ++j){
-          bigram_context[0]=find_index(vidxpath[i-1][j], voc, Big5);
+          bigram_context[0]=find_index(vidxpath[i-1][j]);
 
           LogP logp=lm.wordProb(candidate_idx, bigram_context);
           LogP backoff=lm.wordProb(candidate_idx, empty_context);
           logp=check_backoff(logp, backoff);
-          logp+=prob[i-i][j];
+          logp+=prob[i-1][j];
           if (logp > maxp){
             maxp=logp;
             backtrack[i][size]=j;
@@ -118,7 +119,7 @@ void Viterbi(char *input_text, char *input_map, char *input_lm, int order){
     //find the path with maximum probability
     int bound=candidate_cnt[count-1];
     VocabString finalpath[maxWordLength];
-    find_max_path(count, bound, prob, Big5, vidxpath, backtrack, finalpath);
+    find_max_path(count, bound, prob, vidxpath, backtrack, finalpath);
     print_path(finalpath, count);
   }
   textfile.close();
@@ -138,7 +139,7 @@ void print_path(VocabString path[], int count){
 }
 
 
-void find_max_path(int count, int bound, LogP prob[][1000], Vocab Big5, VocabIndex vidxpath[][1000], int backtrack[][1000], VocabString *finalpath){
+void find_max_path(int count, int bound, LogP prob[][1000], VocabIndex vidxpath[][1000], int backtrack[][1000], VocabString *finalpath){
   LogP maxp=LogP_Zero;
   int max_col=-1;
   for (int j=0; j<bound; ++j){
@@ -149,7 +150,7 @@ void find_max_path(int count, int bound, LogP prob[][1000], Vocab Big5, VocabInd
   }
 
   //VocabString finalpath[maxWordLength];
-  
+
   finalpath[0]="<s>";
   //print_path(final_path, count);
 
@@ -159,7 +160,7 @@ void find_max_path(int count, int bound, LogP prob[][1000], Vocab Big5, VocabInd
     //cout<<finalpath[i]<<endl;
     max_col=backtrack[i][max_col];
   }
-  
+
 }
 
 
@@ -171,7 +172,7 @@ LogP check_backoff(LogP logp, LogP backoff){
 }
 
 
-int find_index(int idx, Vocab voc, Vocab Big5){
+int find_index(int idx){
   //check if the word can be found in voc,
   //if not, set return index == Vocab_Unknown
   VocabIndex re_idx=voc.getIndex(Big5.getWord(idx));
